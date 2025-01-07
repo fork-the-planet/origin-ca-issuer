@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -10,18 +12,14 @@ import (
 	"github.com/cloudflare/origin-ca-issuer/internal/cfapi"
 	v1 "github.com/cloudflare/origin-ca-issuer/pkgs/apis/v1"
 	"github.com/cloudflare/origin-ca-issuer/pkgs/controllers"
-	"github.com/go-logr/zerologr"
-	"github.com/rs/zerolog"
+	"github.com/go-logr/logr"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/clock"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	crlog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func main() {
@@ -31,36 +29,32 @@ func main() {
 
 	_ = fs.Parse(os.Args[1:])
 
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
-	zerologr.NameFieldName = "logger"
-	zerologr.NameSeparator = "/"
-
-	zl := zerolog.New(os.Stderr).With().Caller().Timestamp().Logger()
-	logf.SetLogger(zerologr.New(&zl))
-	log := logf.Log.WithName("origin-issuer").V(8)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+	crlog.SetLogger(logr.FromSlogHandler(logger.Handler()))
 
 	if err := o.Validate(); err != nil {
-		log.Error(err, "error validating options")
+		logger.Error("error validating options", "error", err)
 		os.Exit(1)
 	}
 
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
-		log.Error(err, "could not add to scheme")
+		logger.Error("could not add to scheme", "error", err)
 		os.Exit(1)
 	}
 	if err := certmanager.AddToScheme(scheme); err != nil {
-		log.Error(err, "could not add to scheme")
+		logger.Error("could not add to scheme", "error", err)
 		os.Exit(1)
 	}
 	if err := v1.AddToScheme(scheme); err != nil {
-		log.Error(err, "could not add to scheme")
+		logger.Error("could not add to scheme", "error", err)
 		os.Exit(1)
 	}
 
 	kubeCfg, err := config.GetConfig()
 	if err != nil {
-		log.Error(err, "could not load kubeconfig")
+		logger.Error("could not load kubeconfig", "error", err)
 		os.Exit(1)
 	}
 
@@ -71,64 +65,24 @@ func main() {
 		Scheme: scheme,
 	})
 	if err != nil {
-		log.Error(err, "could not create manager")
+		logger.Error("could not create manager", "error", err)
 		os.Exit(1)
 	}
 
-	err = builder.
-		ControllerManagedBy(mgr).
-		For(&v1.OriginIssuer{}).
-		Complete(reconcile.AsReconciler(mgr.GetClient(), &controllers.OriginIssuerController{
-			Client: mgr.GetClient(),
-			Reader: mgr.GetAPIReader(),
-			Clock:  clock.RealClock{},
-			Log:    log.WithName("controllers").WithName("OriginIssuer"),
-		}))
+	ctx, cancel := context.WithCancel(signals.SetupSignalHandler())
+	defer cancel()
 
-	if err != nil {
-		log.Error(err, "could not create origin issuer controller")
-		os.Exit(1)
+	signer := &controllers.Signer{
+		Reader:                   mgr.GetAPIReader(),
+		ClusterResourceNamespace: o.ClusterResourceNamespace,
+		Builder: cfapi.NewBuilder().WithClient(&http.Client{
+			Timeout: 30 * time.Second,
+		}),
 	}
+	signer.SetupWithManager(ctx, mgr)
 
-	err = builder.
-		ControllerManagedBy(mgr).
-		For(&v1.ClusterOriginIssuer{}).
-		Complete(reconcile.AsReconciler(mgr.GetClient(), &controllers.ClusterOriginIssuerController{
-			Client:                   mgr.GetClient(),
-			Reader:                   mgr.GetAPIReader(),
-			ClusterResourceNamespace: o.ClusterResourceNamespace,
-			Clock:                    clock.RealClock{},
-			Log:                      log.WithName("controllers").WithName("ClusterOriginIssuer"),
-		}))
-
-	if err != nil {
-		log.Error(err, "could not create cluster origin issuer controller")
-		os.Exit(1)
-	}
-
-	err = builder.
-		ControllerManagedBy(mgr).
-		For(&certmanager.CertificateRequest{}).
-		Complete(reconcile.AsReconciler(mgr.GetClient(), &controllers.CertificateRequestController{
-			Client:                   mgr.GetClient(),
-			Reader:                   mgr.GetAPIReader(),
-			ClusterResourceNamespace: o.ClusterResourceNamespace,
-			Builder: cfapi.NewBuilder().WithClient(&http.Client{
-				Timeout: 30 * time.Second,
-			}),
-			Log: log.WithName("controllers").WithName("CertificateRequest"),
-
-			Clock:                  clock.RealClock{},
-			CheckApprovedCondition: !o.DisableApprovedCheck,
-		}))
-
-	if err != nil {
-		log.Error(err, "could not create certificaterequest controller")
-		os.Exit(1)
-	}
-
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
-		log.Error(err, "could not start manager")
+	if err := mgr.Start(ctx); err != nil {
+		logger.Error("could not start manager", "error", err)
 		os.Exit(1)
 	}
 }
