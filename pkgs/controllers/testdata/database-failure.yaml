@@ -16,7 +16,7 @@ interactions:
           form: {}
           headers:
               User-Agent:
-                  - github.com/cloudflare/origin-ca-issuer
+                  - origin-ca-issuer/0.0.0
               X-Auth-User-Service-Key:
                   - djEuMC0weDAwQkFCMTBD
           url: https://api.cloudflare.com/client/v4/certificates

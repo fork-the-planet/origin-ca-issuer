@@ -28,7 +28,7 @@ ifeq (${KERNEL},Linux)
 	GOFLAGS ?= -buildmode=pie
 endif
 
-GO_LDFLAGS += -w -s -X main.version=${VERSION}
+GO_LDFLAGS += -w -s -X github.com/cloudflare/origin-ca-issuer/internal/version.Version=${VERSION}
 GOFLAGS += -v
 
 export CGO_ENABLED

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/cloudflare/origin-ca-issuer/internal/version"
 )
 
 type Interface interface {
@@ -121,7 +123,7 @@ func (c *Client) Sign(ctx context.Context, req *SignRequest) (*SignResponse, err
 		return nil, err
 	}
 
-	r.Header.Add("User-Agent", "github.com/cloudflare/origin-ca-issuer")
+	r.Header.Add("User-Agent", "origin-ca-issuer/"+version.Version)
 
 	if c.serviceKey != nil {
 		r.Header.Add("X-Auth-User-Service-Key", string(c.serviceKey))
