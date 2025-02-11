@@ -1,4 +1,4 @@
-FROM docker.io/library/golang:1.23.2-bookworm AS builder
+FROM docker.io/library/golang:1.23.6-bookworm AS builder
 WORKDIR /go/src/app
 ADD . /go/src/app
 
@@ -8,6 +8,6 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     make bin/controller
 
 
-FROM gcr.io/distroless/base-nossl-debian12:nonroot
+FROM docker.io/chainguard/glibc-dynamic:latest
 COPY --from=builder /go/src/app/bin/controller /bin
 ENTRYPOINT ["/bin/controller"]
