@@ -8,6 +8,9 @@ concurrency:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
@@ -16,6 +19,8 @@ jobs:
         with:
           images: cloudflare/origin-ca-issuer
       - uses: docker/setup-buildx-action@v3
+      - uses: sigstore/cosign-installer@v3
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
       - uses: docker/login-action@v3
         if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         with:
@@ -39,6 +44,7 @@ jobs:
             }
           skip-extraction: ${{ steps.cache.outputs.cache-hit }}
       - uses: docker/build-push-action@v5
+        id: docker-push
         with:
           file: ./cmd/controller/Dockerfile
           platforms: linux/amd64, linux/arm64
@@ -48,3 +54,9 @@ jobs:
           push: ${{ startsWith(github.ref, 'refs/tags/v') }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Sign Images
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          TAGS: ${{ steps.docker-meta.outputs.tags }}
+          DIGEST: ${{ steps.docker-push.outputs.digest }}
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes --recursive {}@${DIGEST}
