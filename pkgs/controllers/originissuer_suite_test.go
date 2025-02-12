@@ -1,14 +1,15 @@
 package controllers
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	v1 "github.com/cloudflare/origin-ca-issuer/pkgs/apis/v1"
+	"gotest.tools/v3/assert"
+	"gotest.tools/v3/poll"
+	"gotest.tools/v3/skip"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -49,14 +50,10 @@ func TestOriginIssuerReconcileSuite(t *testing.T) {
 		},
 	}
 
-	if os.Getenv("KUBEBUILDER_ASSETS") == "" {
-		t.Skip("kubebuilder environment was not setup")
-	}
+	skip.If(t, os.Getenv("KUBEBUILDER_ASSETS") == "", "no kubebuilder environment")
 
 	cfg, err := envtestConfig(t)
-	if err != nil {
-		t.Fatalf("error starting envtest: %v", err)
-	}
+	assert.NilError(t, err)
 
 	mgr, err := manager.New(cfg, manager.Options{
 		Metrics: metricsserver.Options{
@@ -64,9 +61,7 @@ func TestOriginIssuerReconcileSuite(t *testing.T) {
 		},
 		Scheme: scheme.Scheme,
 	})
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NilError(t, err)
 	c := mgr.GetClient()
 
 	controller := &OriginIssuerController{
@@ -80,38 +75,33 @@ func TestOriginIssuerReconcileSuite(t *testing.T) {
 		For(&v1.OriginIssuer{}).
 		Complete(reconcile.AsReconciler(c, controller))
 
-	cancel, errChan := StartTestManager(mgr, t)
-	defer func() {
-		cancel()
-		if err := <-errChan; err != nil {
-			t.Fatalf("error starting test manager: %v", err)
-		}
-	}()
+	StartTestManager(mgr, t)
 
-	if err := c.Create(context.TODO(), secret); err != nil {
-		t.Fatalf("error creating secret: %v", err)
-	}
-	defer c.Delete(context.TODO(), secret)
+	ctx := t.Context()
 
-	if err := c.Create(context.TODO(), issuer); err != nil {
-		t.Fatalf("error creating instance: %v", err)
-	}
-	defer c.Delete(context.TODO(), issuer)
+	assert.NilError(t, c.Create(ctx, secret))
+	defer c.Delete(ctx, secret)
 
-	Eventually(t, func() bool {
+	assert.NilError(t, c.Create(ctx, issuer))
+	defer c.Delete(ctx, issuer)
+
+	poll.WaitOn(t, func(t poll.LogT) poll.Result {
 		iss := v1.OriginIssuer{}
 		namespacedName := types.NamespacedName{
 			Namespace: issuer.Namespace,
 			Name:      issuer.Name,
 		}
-
-		err := c.Get(context.TODO(), namespacedName, &iss)
+		err := c.Get(ctx, namespacedName, &iss)
 		if err != nil {
-			return false
+			return poll.Continue("issuer %q was not created", namespacedName.String())
 		}
 
-		return IssuerStatusHasCondition(iss.Status, v1.OriginIssuerCondition{Type: v1.ConditionReady, Status: v1.ConditionTrue})
-	}, 5*time.Second, 10*time.Millisecond, "OriginIssuer reconciler")
+		if IssuerStatusHasCondition(iss.Status, v1.OriginIssuerCondition{Type: v1.ConditionReady, Status: v1.ConditionTrue}) {
+			return poll.Success()
+		}
+
+		return poll.Continue("issuer %q did not have ready condition", namespacedName.String())
+	})
 }
 
 func envtestConfig(t *testing.T) (*rest.Config, error) {
@@ -124,57 +114,24 @@ func envtestConfig(t *testing.T) (*rest.Config, error) {
 	v1.AddToScheme(scheme.Scheme)
 
 	cfg, err := env.Start()
-	if err != nil {
-		return nil, err
-	}
+	assert.NilError(t, err)
 
 	t.Cleanup(func() {
-		if err := env.Stop(); err != nil {
-			t.Fatal(err)
-		}
+		assert.NilError(t, env.Stop())
 	})
 
 	return cfg, nil
 }
 
-func StartTestManager(mgr manager.Manager, t *testing.T) (context.CancelFunc, chan error) {
+func StartTestManager(mgr manager.Manager, t *testing.T) {
 	t.Helper()
 
-	ctx, cancel := context.WithCancel(context.Background())
-
-	errs := make(chan error, 1)
-
+	var err error
 	go func() {
-		errs <- mgr.Start(ctx)
+		err = mgr.Start(t.Context())
 	}()
 
-	return cancel, errs
-}
-
-func Eventually(t *testing.T, condition func() bool, waitFor time.Duration, tick time.Duration, message string) bool {
-	t.Helper()
-
-	ch := make(chan bool, 1)
-
-	timer := time.NewTimer(waitFor)
-	defer timer.Stop()
-
-	ticker := time.NewTicker(tick)
-	defer ticker.Stop()
-
-	for tick := ticker.C; ; {
-		select {
-		case <-timer.C:
-			t.Fatalf("condition never satisfied: %s", message)
-			return false
-		case <-tick:
-			tick = nil
-			go func() { ch <- condition() }()
-		case v := <-ch:
-			if v {
-				return true
-			}
-			tick = ticker.C
-		}
-	}
+	t.Cleanup(func() {
+		assert.NilError(t, err)
+	})
 }

@@ -28,9 +28,6 @@ func TestSign(t *testing.T) {
 	}
 
 	run := func(t *testing.T, tc testCase) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
 		signer := SignerFunc(func(ctx context.Context, req *cfapi.SignRequest) (*cfapi.SignResponse, error) {
 			assert.DeepEqual(t, req, tc.signReq, cmpopts.IgnoreFields(cfapi.SignRequest{}, "CSR"))
 			return &cfapi.SignResponse{
@@ -41,7 +38,7 @@ func TestSign(t *testing.T) {
 		provisioner, err := New(signer, tc.reqType, logr.Discard())
 		assert.NilError(t, err)
 
-		res, err := provisioner.Sign(ctx, tc.req)
+		res, err := provisioner.Sign(t.Context(), tc.req)
 		assert.NilError(t, err)
 		assert.DeepEqual(t, res, tc.expected)
 	}
@@ -141,9 +138,6 @@ func TestSign(t *testing.T) {
 }
 
 func TestSign_Error(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	signer := SignerFunc(func(ctx context.Context, req *cfapi.SignRequest) (*cfapi.SignResponse, error) {
 		return nil, errors.New("cfapi error")
 	})
@@ -161,7 +155,7 @@ func TestSign_Error(t *testing.T) {
 	provisioner, err := New(signer, v1.RequestTypeOriginECC, logr.Discard())
 	assert.NilError(t, err)
 
-	_, err = provisioner.Sign(ctx, req)
+	_, err = provisioner.Sign(t.Context(), req)
 	assert.Error(t, err, "unable to sign request: cfapi error")
 }
 

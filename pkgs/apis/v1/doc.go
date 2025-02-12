@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
-//go:generate controller-gen object crd paths=./. output:crd:artifacts:config=../../../deploy/crds
+//go:generate go tool controller-gen object crd paths=./. output:crd:artifacts:config=../../../deploy/crds
 
 var (
 	// GroupVersion is group version used to register these objects

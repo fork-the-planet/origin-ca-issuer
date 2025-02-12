@@ -6,7 +6,6 @@ GOTESTSUM := $(shell command -v gotestsum 2> /dev/null)
 DIB ?= docker
 IMAGE_ROOT ?= localhost/origin-ca-issuer
 IMAGE_VERSION ?= $(shell git log -1 --pretty=format:%cd-%h --date short HEAD)
-VERSION := $(shell git describe --tags --always --dirty=-dev)
 # Build docker images for the native arch, but allow overriding in the environment for local development
 PLATFORM ?= local
 
@@ -28,7 +27,7 @@ ifeq (${KERNEL},Linux)
 	GOFLAGS ?= -buildmode=pie
 endif
 
-GO_LDFLAGS += -w -s -X github.com/cloudflare/origin-ca-issuer/internal/version.Version=${VERSION}
+GO_LDFLAGS += -w -s
 GOFLAGS += -v
 
 export CGO_ENABLED
@@ -84,10 +83,6 @@ endif
 lint:
 	staticcheck -tags suite ./...
 
-.PHONY: controller-gen
-controller-gen:
-	go install sigs.k8s.io/controller-tools/cmd/controller-gen
-
 .PHONY: go-generate
-go-generate: controller-gen
+go-generate:
 	go generate -v ./...

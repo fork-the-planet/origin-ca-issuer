@@ -24,7 +24,7 @@ type ClusterOriginIssuerController struct {
 	Clock                    clock.Clock
 }
 
-//go:generate controller-gen rbac:roleName=originissuer-control paths=./. output:rbac:artifacts:config=../../deploy/rbac
+//go:generate go tool controller-gen rbac:roleName=originissuer-control paths=./. output:rbac:artifacts:config=../../deploy/rbac
 
 // +kubebuilder:rbac:groups=cert-manager.k8s.cloudflare.com,resources=clusteroriginissuers,verbs=get;list;watch;create
 // +kubebuilder:rbac:groups=cert-manager.k8s.cloudflare.com,resources=clusteroriginissuers/status,verbs=get;update;patch

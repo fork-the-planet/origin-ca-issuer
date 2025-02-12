@@ -123,7 +123,7 @@ func (c *Client) Sign(ctx context.Context, req *SignRequest) (*SignResponse, err
 		return nil, err
 	}
 
-	r.Header.Add("User-Agent", "origin-ca-issuer/"+version.Version)
+	r.Header.Add("User-Agent", "origin-ca-issuer/"+version.Version())
 
 	if c.serviceKey != nil {
 		r.Header.Add("X-Auth-User-Service-Key", string(c.serviceKey))

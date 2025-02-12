@@ -1,13 +1,12 @@
 package controllers
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	v1 "github.com/cloudflare/origin-ca-issuer/pkgs/apis/v1"
-	"github.com/google/go-cmp/cmp"
+	"gotest.tools/v3/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,13 +19,8 @@ import (
 )
 
 func TestOriginIssuerReconcile(t *testing.T) {
-	if err := cmapi.AddToScheme(scheme.Scheme); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := v1.AddToScheme(scheme.Scheme); err != nil {
-		t.Fatal(err)
-	}
+	assert.NilError(t, cmapi.AddToScheme(scheme.Scheme))
+	assert.NilError(t, v1.AddToScheme(scheme.Scheme))
 
 	clock := fakeClock.NewFakeClock(time.Now().Truncate(time.Second))
 	now := metav1.NewTime(clock.Now())
@@ -229,7 +223,6 @@ func TestOriginIssuerReconcile(t *testing.T) {
 					},
 				},
 			},
-			error: `secret issuer-service-key does not contain key "key"`,
 			namespaceName: types.NamespacedName{
 				Namespace: "default",
 				Name:      "foo",
@@ -238,7 +231,6 @@ func TestOriginIssuerReconcile(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			client := fake.NewClientBuilder().
 				WithScheme(scheme.Scheme).
@@ -253,23 +245,18 @@ func TestOriginIssuerReconcile(t *testing.T) {
 				Log:    logf.Log,
 			}
 
-			_, err := reconcile.AsReconciler(client, controller).Reconcile(context.Background(), reconcile.Request{
+			_, err := reconcile.AsReconciler(client, controller).Reconcile(t.Context(), reconcile.Request{
 				NamespacedName: tt.namespaceName,
 			})
-
-			if err != nil {
-				if diff := cmp.Diff(err.Error(), tt.error); diff != "" {
-					t.Fatalf("diff: (-wanted +got)\n%s", diff)
-				}
+			if tt.error == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.Error(t, err, tt.error)
 			}
 
 			got := &v1.OriginIssuer{}
-			if err := client.Get(context.TODO(), tt.namespaceName, got); err != nil {
-				t.Fatalf("expected to retrieve issuer from client: %s", err)
-			}
-			if diff := cmp.Diff(got.Status, tt.expected); diff != "" {
-				t.Fatalf("diff: (-want +got)\n%s", diff)
-			}
+			assert.NilError(t, client.Get(t.Context(), tt.namespaceName, got))
+			assert.DeepEqual(t, got.Status, tt.expected)
 		})
 	}
 }
