@@ -20,21 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-//go:generate go tool controller-gen rbac:roleName=originissuer-control paths=./. output:rbac:artifacts:config=../../deploy/rbac
-
-// +kubebuilder:rbac:groups=cert-manager.io,resources=certificaterequests,verbs=get;list;watch
-// +kubebuilder:rbac:groups=cert-manager.io,resources=certificaterequests/status,verbs=patch
-
-// +kubebuilder:rbac:groups=certificates.k8s.io,resources=certificatesigningrequests,verbs=get;list;watch
-// +kubebuilder:rbac:groups=certificates.k8s.io,resources=certificatesigningrequests/status,verbs=patch
-// +kubebuilder:rbac:groups=certificates.k8s.io,resources=signers,verbs=sign,resourceNames=originissuers.cert-manager.k8s.cloudflare.com/*;clusteroriginissuers.cert-manager.k8s.cloudflare.com/*
-
-// +kubebuilder:rbac:groups=cert-manager.k8s.cloudflare.com,resources=originissuers;clusteroriginissuers,verbs=get;list;watch
-// +kubebuilder:rbac:groups=cert-manager.k8s.cloudflare.com,resources=originissuers/status;clusteroriginissuers/status,verbs=patch
-
-// +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
-// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
-
 var errNoAuthMethods = errors.New("no authentication methods were configured")
 
 //go:embed certificates
