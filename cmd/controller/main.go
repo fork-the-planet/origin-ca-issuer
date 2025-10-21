@@ -100,7 +100,10 @@ func main() {
 			Timeout: 30 * time.Second,
 		}),
 	}
-	signer.SetupWithManager(ctx, mgr)
+	if err := signer.SetupWithManager(ctx, mgr); err != nil {
+		logger.Error("could not setup controllers with manager", "error", err)
+		os.Exit(1)
+	}
 
 	if err := mgr.Start(ctx); err != nil {
 		logger.Error("could not start manager", "error", err)
