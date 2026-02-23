@@ -374,7 +374,7 @@ func RecorderMust(t *testing.T, name string) *recorder.Recorder {
 			return nil
 		}, recorder.BeforeSaveHook),
 		recorder.WithSkipRequestLatency(true),
-		recorder.WithMatcher(cassette.NewDefaultMatcher(cassette.WithIgnoreUserAgent(true))),
+		recorder.WithMatcher(cassette.NewDefaultMatcher(cassette.WithIgnoreUserAgent())),
 	)
 	if err != nil {
 		t.Fatal(err)

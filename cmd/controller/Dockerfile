@@ -1,4 +1,4 @@
-FROM docker.io/library/golang:1.25.3-trixie AS builder
+FROM docker.io/library/golang:1.26.1-trixie AS builder
 WORKDIR /go/src/app
 ADD . /go/src/app
 
