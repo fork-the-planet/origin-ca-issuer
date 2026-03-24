@@ -53,7 +53,7 @@ func (s *Signer) SetupWithManager(ctx context.Context, mgr manager.Manager) erro
 		MaxRetryDuration:               1 * time.Minute,
 		Check:                          s.Check,
 		Sign:                           s.Sign,
-		EventRecorder:                  mgr.GetEventRecorderFor("originissuer." + v1.GroupVersion.Group),
+		EventRecorder:                  mgr.GetEventRecorder("originissuer." + v1.GroupVersion.Group),
 		SetCAOnCertificateRequest:      true,
 		DisableKubernetesCSRController: false,
 	}
