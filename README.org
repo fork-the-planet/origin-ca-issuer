@@ -87,7 +87,12 @@ $ kubectl get originissuer.cert-manager.k8s.cloudflare.com prod-issuer -o json |
 #+END_EXAMPLE
 
 **** Origin CA Service Key
-The [[https://developers.cloudflare.com/fundamentals/api/get-started/ca-keys/][Origin CA Key]] is supported but discouraged in favor of API tokens. This key will begin with "v1.0-" and is different from the legacy "Global API Key".
+#+BEGIN_QUOTE
+[!WARNING]
+Support for Origin CA Service Keys [[https://developers.cloudflare.com/fundamentals/api/reference/deprecations/#2026-03-19][was deprecated]] on 2026-03-19. Users of Origin CA Issuer should migrate to using API Tokens.
+#+END_QUOTE
+
+The [[https://developers.cloudflare.com/fundamentals/api/get-started/ca-keys/][Origin CA Key]] will begin with "v1.0-" and is different from the legacy "Global API Key".
 
 #+BEGIN_SRC sh :file ./deploy/example/service-key.secret.yaml :results silent file :exports code
 kubectl create secret generic \

@@ -78,6 +78,7 @@ type OriginIssuerSpec struct {
 // +kubebuilder:validation:ExactlyOneOf=serviceKeyRef;tokenRef
 type OriginIssuerAuthentication struct {
 	// ServiceKeyRef authenticates with an API Service Key (the "Origin CA Key").
+	// Deprecated: 2026-03-19.
 	// +optional
 	ServiceKeyRef *SecretKeySelector `json:"serviceKeyRef,omitempty"`
 

@@ -14,6 +14,7 @@ import (
 	"github.com/cert-manager/issuer-lib/controllers/signer"
 	"github.com/cloudflare/origin-ca-issuer/internal/cfapi"
 	v1 "github.com/cloudflare/origin-ca-issuer/pkgs/apis/v1"
+	"github.com/go-logr/logr"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -83,9 +84,15 @@ func (s *Signer) getAuthSecret(ctx context.Context, issuer issuerv1alpha1.Issuer
 }
 
 func (s *Signer) Check(ctx context.Context, issuer issuerv1alpha1.Issuer) error {
+	log := logr.FromContextAsSlogLogger(ctx)
+
 	secret, key, err := s.getAuthSecret(ctx, issuer)
 	if err != nil {
 		return err
+	}
+
+	if issuer.(originIssuer).GetAuth().GetType() == v1.AuthTypeServiceKey {
+		log.WarnContext(ctx, "Issuer uses deprecated serviceKeyRef authentication")
 	}
 
 	_, ok := secret.Data[key]
