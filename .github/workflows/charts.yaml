@@ -8,14 +8,17 @@ concurrency:
 jobs:
   chart-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: azure/setup-helm@v3
-      - uses: actions/setup-python@v4
+          persist-credentials: false
+      - uses: azure/setup-helm@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.13"
           check-latest: true
       - uses: helm/chart-testing-action@v2
       - name: chart-testing (list-changed)
