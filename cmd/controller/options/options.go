@@ -2,6 +2,7 @@ package options
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/spf13/pflag"
 )
@@ -12,14 +13,16 @@ type ControllerOptions struct {
 	ClusterResourceNamespace string
 	LeaderElectionNamespace  string
 	LeaderElectionID         string
+	APITimeout               time.Duration
 
 	DisableApprovedCheck bool
 }
 
 const (
-	defaultKubernetesAPIQPS   float32 = 20
-	defaultKubernetesAPIBurst int     = 50
-	defaultLeaderElectionID   string  = "origin-ca-issuer"
+	defaultKubernetesAPIQPS   float32       = 20
+	defaultKubernetesAPIBurst int           = 50
+	defaultLeaderElectionID   string        = "origin-ca-issuer"
+	defaultAPITimeout         time.Duration = 30 * time.Second
 )
 
 func NewControllerOptions() *ControllerOptions {
@@ -27,6 +30,7 @@ func NewControllerOptions() *ControllerOptions {
 		KubernetesAPIQPS:   defaultKubernetesAPIQPS,
 		KubernetesAPIBurst: defaultKubernetesAPIBurst,
 		LeaderElectionID:   defaultLeaderElectionID,
+		APITimeout:         defaultAPITimeout,
 	}
 }
 
@@ -37,6 +41,7 @@ func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.ClusterResourceNamespace, "cluster-resource-namespace", o.ClusterResourceNamespace, "Namespace used for cluster-scoped resources, such as secrets used by ClusterOriginIssuer")
 	fs.StringVar(&o.LeaderElectionNamespace, "leader-election-namespace", o.LeaderElectionNamespace, "Namespace used for leader election leases (defaults to pod's namespace).")
 	fs.StringVar(&o.LeaderElectionID, "leader-election-id", o.LeaderElectionID, "Lease name used for leader election.")
+	fs.DurationVar(&o.APITimeout, "cfapi-timeout", o.APITimeout, "HTTP timeout for the Cloudflare API")
 }
 
 func (o *ControllerOptions) Validate() error {

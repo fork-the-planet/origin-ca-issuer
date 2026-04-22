@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"time"
 
 	certmanager "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/cloudflare/origin-ca-issuer/cmd/controller/options"
@@ -97,7 +96,7 @@ func main() {
 		Reader:                   mgr.GetAPIReader(),
 		ClusterResourceNamespace: o.ClusterResourceNamespace,
 		Builder: cfapi.NewBuilder().WithClient(&http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: o.APITimeout,
 		}),
 	}
 	if err := signer.SetupWithManager(ctx, mgr); err != nil {
