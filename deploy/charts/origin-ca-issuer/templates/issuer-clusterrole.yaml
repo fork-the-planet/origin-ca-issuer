@@ -12,9 +12,6 @@ metadata:
     helm.sh/chart: {{ template "origin-ca-issuer.chart" . }}
 rules:
   - apiGroups: [""]
-    resources: ["events"]
-    verbs: ["create", "patch"]
-  - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["cert-manager.io"]
@@ -42,6 +39,9 @@ rules:
     resources: ["signers"]
     resourceNames: ["clusteroriginissuers.cert-manager.k8s.cloudflare.com/*", "originissuers.cert-manager.k8s.cloudflare.com/*"]
     verbs: ["sign"]
+  - apiGroups: ["events.k8s.io"]
+    resources: ["events"]
+    verbs: ["create", "patch", "update"]
 ---
 # permissions to approve all cert-manager.k8s.cloudflare.com requests
 apiVersion: rbac.authorization.k8s.io/v1
