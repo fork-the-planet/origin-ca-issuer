@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cloudflare/origin-ca-issuer/internal/version"
+	"github.com/go-logr/logr"
 )
 
 type Interface interface {
@@ -89,7 +90,7 @@ type SignResponse struct {
 type APIResponse struct {
 	Success  bool            `json:"success"`
 	Errors   []APIError      `json:"errors"`
-	Messages []string        `json:"messages"`
+	Messages []APIError      `json:"messages"`
 	Result   json.RawMessage `json:"result"`
 }
 
@@ -113,6 +114,8 @@ func (a *APIError) Is(target error) bool {
 }
 
 func (c *Client) Sign(ctx context.Context, req *SignRequest) (*SignResponse, error) {
+	log := logr.FromContextAsSlogLogger(ctx)
+
 	p, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -149,6 +152,10 @@ func (c *Client) Sign(ctx context.Context, req *SignRequest) (*SignResponse, err
 		err := &api.Errors[0]
 		err.RayID = rayID
 		return nil, err
+	}
+
+	for _, msg := range api.Messages {
+		log.InfoContext(ctx, msg.Message)
 	}
 
 	signResp := SignResponse{}
