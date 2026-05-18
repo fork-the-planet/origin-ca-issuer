@@ -33,6 +33,7 @@ import (
 // +kubebuilder:rbac:groups=cert-manager.k8s.cloudflare.com,resources=originissuers;clusteroriginissuers,verbs=get;list;watch
 // +kubebuilder:rbac:groups=cert-manager.k8s.cloudflare.com,resources=originissuers/status;clusteroriginissuers/status,verbs=patch
 
+// +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
 //
 // +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch;update

@@ -12,6 +12,9 @@ metadata:
     helm.sh/chart: {{ template "origin-ca-issuer.chart" . }}
 rules:
   - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["cert-manager.io"]
